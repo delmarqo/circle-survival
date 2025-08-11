@@ -6,7 +6,12 @@ body {
     font-family: Arial, sans-serif;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    /* Occupy the visible viewport height and subtract any iOS safe area inset on the bottom
+       to ensure the game area doesn’t get hidden behind the mobile Safari toolbar. */
+    height: calc(100vh - env(safe-area-inset-bottom));
+    /* Prevent the page from scrolling on mobile devices */
+    overflow: hidden;
+    overscroll-behavior: none;
     background-color: #f7f7f7;
 }
 
