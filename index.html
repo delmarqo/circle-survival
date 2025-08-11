@@ -7,12 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark">
-    <!-- Header with title, tagline and scoreboard -->
+    <!-- Header with scoreboard and controls (title removed for compactness) -->
     <header class="page-header">
-        <div class="title-area">
-            <h1 class="game-title">Circle Survival</h1>
-            <p class="subtitle">Pop the circles before one engulfs the board. Survive&nbsp;30s to advance.</p>
-        </div>
         <div class="score-area">
             <div class="score-info">
                 <div class="score-box">
@@ -28,12 +24,14 @@
                     <div id="best" class="score-value">0</div>
                 </div>
             </div>
-            <!-- Timer container sits beside the score boxes; the timer bar fills this container -->
+            <!-- Timer container will expand to fill remaining horizontal space -->
             <div class="timer-container">
                 <div id="timer-bar" class="timer-bar"></div>
             </div>
-            <!-- The numeric timer label sits to the right of the bar -->
+            <!-- Numeric time label -->
             <span id="time-label" class="timer-label">30</span>
+            <!-- Help button to show game instructions -->
+            <button id="help-btn" class="help-btn" title="Help">?</button>
         </div>
     </header>
     <!-- Main game area -->
@@ -59,6 +57,21 @@
             <div class="overlay-buttons">
                 <button id="start-btn" class="primary-btn">Start Level&nbsp;<span id="start-level-index">1</span></button>
                 <button id="reset-progress-btn" class="secondary-btn">Reset Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help overlay displays title, instructions and legend when the help button is clicked -->
+    <div id="help-overlay" class="overlay hidden">
+        <div class="overlay-content help-content">
+            <button id="close-help-btn" class="close-btn" aria-label="Close help">&times;</button>
+            <h2 class="overlay-title">Circle Survival</h2>
+            <p class="overlay-desc">Pop the circles before one engulfs the board. Survive&nbsp;30&nbsp;seconds per level.</p>
+            <p class="overlay-desc">Click circles before they grow too large. Armored circles require two clicks starting on level&nbsp;2. Drifter circles move across the screen from level&nbsp;3 onward.</p>
+            <div class="legend help-legend">
+                <span class="legend-item"><span class="dot normal"></span>Normal</span>
+                <span class="legend-item"><span class="dot armored"></span>Armored</span>
+                <span class="legend-item"><span class="dot drifter"></span>Drifter</span>
             </div>
         </div>
     </div>

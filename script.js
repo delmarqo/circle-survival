@@ -7,17 +7,25 @@
 (() => {
     const gameArea = document.getElementById('game-area');
     const startBtn = document.getElementById('start-btn');
-    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
     const restartBtn = document.getElementById('restart-btn');
+    const resetProgressBtn = document.getElementById('reset-progress-btn');
     const levelSpan = document.getElementById('level');
-    const timeSpan = document.getElementById('time');
+    const scoreSpan = document.getElementById('score');
     const bestSpan = document.getElementById('best');
-
-    // Elements for inter-level overlay
+    const timerBar = document.getElementById('timer-bar');
+    const timeLabel = document.getElementById('time-label');
     const overlay = document.getElementById('level-overlay');
-    const overlayMessage = document.getElementById('overlay-message');
-    const nextLevelBtn = document.getElementById('next-level-btn');
-    const quitBtn = document.getElementById('quit-btn');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
+    const startLevelIndexSpan = document.getElementById('start-level-index');
+
+    // Help elements
+    const helpBtn = document.getElementById('help-btn');
+    const helpOverlay = document.getElementById('help-overlay');
+    const closeHelpBtn = document.getElementById('close-help-btn');
+    // Track whether the game should resume automatically after closing help
+    let resumeAfterHelp = false;
 
     let circles = [];
     let spawnTimeoutId = null;
@@ -29,27 +37,37 @@
     let spawnInterval = 2000; // milliseconds until next spawn
     let spawnAcceleration = 0.9; // factor applied to spawn interval after each spawn
     let lastUpdateTime = 0;
+    let score = 0;
 
-    // Start the game when start button is clicked
+    const BASE_SPAWN_INTERVAL = 2000;
+    const MIN_SPAWN_INTERVAL = 300;
+
+    // Start or continue the game when start button is clicked
     startBtn.addEventListener('click', () => {
-        if (gameRunning) return;
-        resetGame();
-        gameRunning = true;
-        paused = false;
-        startBtn.disabled = true;
-        pauseBtn.disabled = false;
-        restartBtn.disabled = false;
-        lastUpdateTime = performance.now();
-        // start spawn cycle and animation loop
-        spawnNext();
-        animationFrameId = requestAnimationFrame(update);
+        // hide overlay and start current level
+        overlay.classList.add('hidden');
+        startLevel();
     });
 
-    // Pause/resume toggle
-    pauseBtn.addEventListener('click', () => {
+    // Open help overlay when the help button is clicked
+    if (helpBtn) {
+        helpBtn.addEventListener('click', () => {
+            openHelp();
+        });
+    }
+
+    // Close help overlay when X button clicked
+    if (closeHelpBtn) {
+        closeHelpBtn.addEventListener('click', () => {
+            closeHelp();
+        });
+    }
+
+    // Pause/resume toggle for resumeBtn
+    resumeBtn.addEventListener('click', () => {
         if (!gameRunning) return;
         paused = !paused;
-        pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+        resumeBtn.textContent = paused ? 'Resume' : 'Pause';
         if (paused) {
             clearTimeout(spawnTimeoutId);
             cancelAnimationFrame(animationFrameId);
@@ -60,19 +78,66 @@
         }
     });
 
-    // Restart the game completely
+    // Restart the current level
     restartBtn.addEventListener('click', () => {
         if (!gameRunning) return;
-        clearTimeout(spawnTimeoutId);
-        cancelAnimationFrame(animationFrameId);
-        gameRunning = false;
-        paused = false;
-        pauseBtn.textContent = 'Pause';
-        startBtn.disabled = false;
-        pauseBtn.disabled = true;
-        restartBtn.disabled = true;
-        resetGame();
+        restartLevel();
     });
+
+    // Reset progress: clear best level and reset game state
+    if (resetProgressBtn) {
+        resetProgressBtn.addEventListener('click', () => {
+            localStorage.removeItem('bestLevel');
+            bestSpan.textContent = '0';
+            // reset game state completely
+            gameRunning = false;
+            paused = false;
+            clearTimeout(spawnTimeoutId);
+            cancelAnimationFrame(animationFrameId);
+            resetGame();
+            currentLevel = 1;
+            score = 0;
+            // update overlay for starting level
+            startLevelIndexSpan.textContent = currentLevel.toString();
+            overlayTitle.textContent = 'Ready?';
+            overlayDesc.textContent = 'Click circles before they grow too large. Survive\u00a030\u00a0seconds.';
+            overlay.classList.remove('hidden');
+        });
+    }
+
+    /**
+     * Show the help overlay and pause the game if necessary.
+     */
+    function openHelp() {
+        if (!helpOverlay) return;
+        helpOverlay.classList.remove('hidden');
+        // If the game is running and not currently paused, pause it and remember to resume after help
+        if (gameRunning && !paused) {
+            resumeAfterHelp = true;
+            paused = true;
+            resumeBtn.textContent = 'Resume';
+            clearTimeout(spawnTimeoutId);
+            cancelAnimationFrame(animationFrameId);
+        } else {
+            resumeAfterHelp = false;
+        }
+    }
+
+    /**
+     * Hide the help overlay and resume the game if it was paused by help.
+     */
+    function closeHelp() {
+        if (!helpOverlay) return;
+        helpOverlay.classList.add('hidden');
+        if (resumeAfterHelp && gameRunning && paused) {
+            paused = false;
+            resumeBtn.textContent = 'Pause';
+            lastUpdateTime = performance.now();
+            spawnNext();
+            animationFrameId = requestAnimationFrame(update);
+        }
+        resumeAfterHelp = false;
+    }
 
     // Reset all game variables and clear circles
     function resetGame() {
@@ -80,8 +145,8 @@
         circles.forEach(c => c.element.remove());
         circles = [];
         timeLeft = 30;
-        currentLevel = 1;
-        spawnInterval = 2000;
+        // set spawnInterval based on current level (accelerates each level)
+        spawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
         spawnAcceleration = 0.9;
         updateUI();
     }
@@ -106,7 +171,8 @@
         const x = Math.random() * (rect.width - initialRadius * 2) + initialRadius;
         const y = Math.random() * (rect.height - initialRadius * 2) + initialRadius;
         const elem = document.createElement('div');
-        elem.className = 'circle';
+        // base class for all circles; mark as normal by default
+        elem.className = 'circle normal';
         // circle properties
         const circle = {
             element: elem,
@@ -129,6 +195,8 @@
             const speed = 40; // pixels per second
             circle.driftX = Math.cos(angle) * speed;
             circle.driftY = Math.sin(angle) * speed;
+            // add drifter class for styling
+            elem.classList.add('drifter');
         }
         // set initial size and position
         updateCircleStyle(circle);
@@ -141,6 +209,9 @@
                 elem.classList.add('damaged');
             } else {
                 removeCircle(circle);
+                // increment score for each circle popped
+                score++;
+                updateUI();
             }
         });
         gameArea.appendChild(elem);
@@ -221,7 +292,7 @@
     // Update UI elements for level, time and best score
     function updateUI() {
         levelSpan.textContent = currentLevel.toString();
-        timeSpan.textContent = Math.ceil(timeLeft).toString();
+        scoreSpan.textContent = score.toString();
         // update best level stored in localStorage
         let best = parseInt(localStorage.getItem('bestLevel') || '0', 10);
         if (currentLevel > best) {
@@ -229,6 +300,9 @@
             best = currentLevel;
         }
         bestSpan.textContent = best.toString();
+        // update time display and timer bar
+        timeLabel.textContent = Math.max(0, Math.ceil(timeLeft)).toString();
+        timerBar.style.width = ((timeLeft / 30) * 100) + '%';
     }
 
     // Handle completing a level
@@ -242,19 +316,20 @@
         // increment level and reset timer for next level
         currentLevel++;
         timeLeft = 30;
+        score = 0;
         // adjust spawn interval for next level (slightly faster each level)
-        spawnInterval = 2000 * Math.pow(0.9, currentLevel - 1);
+        spawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
         spawnAcceleration = 0.9;
         updateUI();
-        // show overlay prompting user to continue or quit
-        if (overlay && overlayMessage) {
-            overlayMessage.textContent = `Level ${completedLevel} complete! Get ready for the next level.`;
+        // prepare overlay for next level
+        if (overlay) {
+            overlayTitle.textContent = `Level ${completedLevel} complete!`;
+            overlayDesc.textContent = 'Get ready for the next level.';
+            startLevelIndexSpan.textContent = currentLevel.toString();
             overlay.classList.remove('hidden');
         } else {
             // fallback: automatically continue if overlay is missing
-            lastUpdateTime = performance.now();
-            spawnNext();
-            animationFrameId = requestAnimationFrame(update);
+            startLevel();
         }
     }
 
@@ -268,10 +343,9 @@
         circles = [];
         alert('Game Over! You reached level ' + currentLevel);
         // reset buttons
-        startBtn.disabled = false;
-        pauseBtn.disabled = true;
+        resumeBtn.textContent = 'Pause';
+        resumeBtn.disabled = true;
         restartBtn.disabled = true;
-        pauseBtn.textContent = 'Pause';
     }
 
     // Optional: clicking on empty game area has no effect
@@ -279,38 +353,38 @@
         // no op; could add feedback if desired
     });
 
-    // Event handlers for overlay buttons
-    if (nextLevelBtn) {
-        nextLevelBtn.addEventListener('click', () => {
-            // hide overlay and resume game
-            overlay.classList.add('hidden');
-            lastUpdateTime = performance.now();
-            spawnNext();
-            animationFrameId = requestAnimationFrame(update);
-        });
+    /**
+     * Start the current level. Resets state and begins spawning circles.
+     */
+    function startLevel() {
+        resetGame();
+        gameRunning = true;
+        paused = false;
+        score = 0;
+        // enable controls
+        resumeBtn.disabled = false;
+        restartBtn.disabled = false;
+        resumeBtn.textContent = 'Pause';
+        // begin spawning and animation
+        lastUpdateTime = performance.now();
+        spawnNext();
+        animationFrameId = requestAnimationFrame(update);
     }
 
-    if (quitBtn) {
-        quitBtn.addEventListener('click', () => {
-            // hide overlay and reset game to initial state
-            overlay.classList.add('hidden');
-            gameRunning = false;
-            clearTimeout(spawnTimeoutId);
-            cancelAnimationFrame(animationFrameId);
-            // remove circles
-            circles.forEach(c => c.element.remove());
-            circles = [];
-            // reset variables
-            timeLeft = 30;
-            currentLevel = 1;
-            spawnInterval = 2000;
-            spawnAcceleration = 0.9;
-            updateUI();
-            // reset buttons
-            startBtn.disabled = false;
-            pauseBtn.disabled = true;
-            restartBtn.disabled = true;
-            pauseBtn.textContent = 'Pause';
-        });
+    /**
+     * Restart the current level without changing the currentLevel counter.
+     */
+    function restartLevel() {
+        clearTimeout(spawnTimeoutId);
+        cancelAnimationFrame(animationFrameId);
+        paused = false;
+        score = 0;
+        resetGame();
+        resumeBtn.textContent = 'Pause';
+        lastUpdateTime = performance.now();
+        gameRunning = true;
+        spawnNext();
+        animationFrameId = requestAnimationFrame(update);
     }
+
 })();
