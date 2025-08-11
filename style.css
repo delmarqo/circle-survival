@@ -1,4 +1,17 @@
 /* Basic styling for the circle survival game */
+/* Theme variables for dark mode UI */
+:root {
+    --bg-main: #07192f;
+    --bg-panel: #0b2a4c;
+    --text-primary: #ffffff;
+    --text-secondary: #a5b9d2;
+    --primary-color: #007acc;
+    --primary-hover: #005ea6;
+    --circle-normal: rgba(0, 166, 255, 0.7);
+    --circle-armored: rgba(102, 49, 169, 0.7);
+    --circle-drifter: rgba(15, 157, 88, 0.7);
+    --circle-border-normal: #00a6ff;
+}
 
 body {
     margin: 0;
@@ -12,7 +25,8 @@ body {
     /* Prevent the page from scrolling on mobile devices */
     overflow: hidden;
     overscroll-behavior: none;
-    background-color: #f7f7f7;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
 }
 
 .header {
@@ -56,8 +70,9 @@ body {
     flex: 1;
     position: relative;
     overflow: hidden;
-    border-top: 1px solid #ddd;
-    background-color: #fafafa;
+    border: 1px solid var(--bg-panel);
+    border-radius: 12px;
+    background-color: transparent;
 }
 
 .circle {
@@ -126,4 +141,223 @@ body {
 
 .overlay-buttons button:hover {
     background-color: #005ea6;
+}
+
+/* --------------------------------------------------------------------------
+   New dark theme UI
+   -------------------------------------------------------------------------- */
+
+/* Header and scoreboard */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+}
+.game-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+/* Score area layout: align score boxes, timer bar and label in a single row */
+.score-area {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    /* allow the timer bar to grow if space permits */
+    flex-wrap: nowrap;
+    /* Minimum width to ensure the timer bar remains visible */
+    min-width: 16rem;
+    flex-shrink: 0;
+}
+.score-info {
+    display: flex;
+    gap: 0.4rem;
+}
+.score-box {
+    background-color: var(--bg-panel);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    text-align: center;
+    min-width: 3rem;
+    box-sizing: border-box;
+}
+.score-label {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.1rem;
+}
+.score-value {
+    font-size: 1rem;
+    font-weight: bold;
+}
+/* Timer container holds the progress bar.  Fixed width to match design */
+.timer-container {
+    position: relative;
+    width: 9rem;
+    height: 0.35rem;
+    background-color: var(--bg-panel);
+    border-radius: 6px;
+    overflow: hidden;
+}
+/* The fill of the timer bar; grows from left to right and shrinks as time elapses */
+.timer-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--primary-color);
+    border-radius: 6px;
+    transition: width 0.1s linear;
+}
+/* Numeric label displaying remaining time sits to the right of the bar */
+.timer-label {
+    position: static;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    margin-left: 0.5rem;
+}
+
+/* Circles with dark theme colours */
+.circle.normal {
+    background-color: var(--circle-normal);
+    border-color: var(--circle-border-normal);
+}
+.circle.armored {
+    background-color: var(--circle-armored);
+    border-color: #5e2d9f;
+    border-width: 3px;
+}
+.circle.drifter {
+    background-color: var(--circle-drifter);
+    border-color: #0f9d58;
+}
+.circle.damaged {
+    background-color: rgba(255, 140, 0, 0.8);
+    border-color: #ff8c00;
+}
+
+/* Overlay styling */
+.overlay {
+    background-color: rgba(0, 0, 0, 0.65);
+}
+.overlay-content {
+    background-color: var(--bg-panel);
+    padding: 2rem 3rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    color: var(--text-primary);
+    max-width: 90%;
+}
+.overlay-title {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+.overlay-desc {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+.overlay-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+.primary-btn,
+.secondary-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s, color 0.2s;
+}
+.primary-btn {
+    background-color: var(--primary-color);
+    color: var(--text-primary);
+}
+.primary-btn:hover {
+    background-color: var(--primary-hover);
+}
+.secondary-btn {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+.secondary-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+/* Bottom bar */
+.bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: var(--bg-main);
+    border-top: 1px solid var(--bg-panel);
+}
+.legend {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+.dot.normal {
+    background-color: var(--circle-normal);
+}
+.dot.armored {
+    background-color: var(--circle-armored);
+}
+.dot.drifter {
+    background-color: var(--circle-drifter);
+}
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.action-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background-color: var(--bg-panel);
+    color: var(--text-primary);
+    transition: background-color 0.2s, color 0.2s;
+}
+.action-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.action-btn:not(:disabled):hover {
+    background-color: var(--primary-color);
+    color: var(--text-primary);
 }

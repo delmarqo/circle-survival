@@ -6,27 +6,59 @@
     <title>Circle Survival</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="header">
-        <div class="info">
-            <span>Level: <span id="level">1</span></span>
-            <span>Time: <span id="time">30</span>s</span>
-            <span>Best: <span id="best">0</span></span>
+<body class="dark">
+    <!-- Header with title, tagline and scoreboard -->
+    <header class="page-header">
+        <div class="title-area">
+            <h1 class="game-title">Circle Survival</h1>
+            <p class="subtitle">Pop the circles before one engulfs the board. Survive&nbsp;30s to advance.</p>
         </div>
-        <div class="controls">
-            <button id="start-btn">Start</button>
-            <button id="pause-btn" disabled>Pause</button>
-            <button id="restart-btn" disabled>Restart</button>
+        <div class="score-area">
+            <div class="score-info">
+                <div class="score-box">
+                    <div class="score-label">LEVEL</div>
+                    <div id="level" class="score-value">1</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">SCORE</div>
+                    <div id="score" class="score-value">0</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">BEST</div>
+                    <div id="best" class="score-value">0</div>
+                </div>
+            </div>
+            <!-- Timer container sits beside the score boxes; the timer bar fills this container -->
+            <div class="timer-container">
+                <div id="timer-bar" class="timer-bar"></div>
+            </div>
+            <!-- The numeric timer label sits to the right of the bar -->
+            <span id="time-label" class="timer-label">30</span>
+        </div>
+    </header>
+    <!-- Main game area -->
+    <div id="game-area" class="game-area"></div>
+    <!-- Bottom bar with legend and actions -->
+    <div class="bottom-bar">
+        <div class="legend">
+            <span class="legend-item"><span class="dot normal"></span>Normal</span>
+            <span class="legend-item"><span class="dot armored"></span>Armored</span>
+            <span class="legend-item"><span class="dot drifter"></span>Drifter</span>
+        </div>
+        <div class="actions">
+            <button id="resume-btn" class="action-btn" disabled>Resume</button>
+            <button id="restart-btn" class="action-btn" disabled>Restart Level</button>
         </div>
     </div>
-    <div id="game-area" class="game-area"></div>
-    <!-- Overlay shown between levels -->
-    <div id="level-overlay" class="overlay hidden">
+    <!-- Overlay for start and level transitions -->
+    <!-- Level overlay is visible on page load. It hides on start or level completion -->
+    <div id="level-overlay" class="overlay">
         <div class="overlay-content">
-            <p id="overlay-message">Level complete! Get ready for the next level.</p>
+            <h2 id="overlay-title" class="overlay-title">Ready?</h2>
+            <p id="overlay-desc" class="overlay-desc">Click circles before they grow too large. Survive&nbsp;30&nbsp;seconds.</p>
             <div class="overlay-buttons">
-                <button id="next-level-btn">OK</button>
-                <button id="quit-btn">Quit</button>
+                <button id="start-btn" class="primary-btn">Start Level&nbsp;<span id="start-level-index">1</span></button>
+                <button id="reset-progress-btn" class="secondary-btn">Reset Progress</button>
             </div>
         </div>
     </div>
