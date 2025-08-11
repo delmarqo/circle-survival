@@ -13,6 +13,12 @@
     const timeSpan = document.getElementById('time');
     const bestSpan = document.getElementById('best');
 
+    // Elements for inter-level overlay
+    const overlay = document.getElementById('level-overlay');
+    const overlayMessage = document.getElementById('overlay-message');
+    const nextLevelBtn = document.getElementById('next-level-btn');
+    const quitBtn = document.getElementById('quit-btn');
+
     let circles = [];
     let spawnTimeoutId = null;
     let animationFrameId = null;
@@ -232,16 +238,24 @@
         // clean up circles
         circles.forEach(c => c.element.remove());
         circles = [];
+        const completedLevel = currentLevel;
+        // increment level and reset timer for next level
         currentLevel++;
         timeLeft = 30;
         // adjust spawn interval for next level (slightly faster each level)
         spawnInterval = 2000 * Math.pow(0.9, currentLevel - 1);
         spawnAcceleration = 0.9;
         updateUI();
-        // continue to next level automatically
-        lastUpdateTime = performance.now();
-        spawnNext();
-        animationFrameId = requestAnimationFrame(update);
+        // show overlay prompting user to continue or quit
+        if (overlay && overlayMessage) {
+            overlayMessage.textContent = `Level ${completedLevel} complete! Get ready for the next level.`;
+            overlay.classList.remove('hidden');
+        } else {
+            // fallback: automatically continue if overlay is missing
+            lastUpdateTime = performance.now();
+            spawnNext();
+            animationFrameId = requestAnimationFrame(update);
+        }
     }
 
     // End the game on failure
@@ -264,4 +278,39 @@
     gameArea.addEventListener('click', () => {
         // no op; could add feedback if desired
     });
+
+    // Event handlers for overlay buttons
+    if (nextLevelBtn) {
+        nextLevelBtn.addEventListener('click', () => {
+            // hide overlay and resume game
+            overlay.classList.add('hidden');
+            lastUpdateTime = performance.now();
+            spawnNext();
+            animationFrameId = requestAnimationFrame(update);
+        });
+    }
+
+    if (quitBtn) {
+        quitBtn.addEventListener('click', () => {
+            // hide overlay and reset game to initial state
+            overlay.classList.add('hidden');
+            gameRunning = false;
+            clearTimeout(spawnTimeoutId);
+            cancelAnimationFrame(animationFrameId);
+            // remove circles
+            circles.forEach(c => c.element.remove());
+            circles = [];
+            // reset variables
+            timeLeft = 30;
+            currentLevel = 1;
+            spawnInterval = 2000;
+            spawnAcceleration = 0.9;
+            updateUI();
+            // reset buttons
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            restartBtn.disabled = true;
+            pauseBtn.textContent = 'Pause';
+        });
+    }
 })();
