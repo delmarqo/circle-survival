@@ -1,0 +1,75 @@
+/* Basic styling for the circle survival game */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f7f7f7;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1;
+}
+
+.header .info span {
+    margin-right: 1rem;
+    font-weight: bold;
+}
+
+.header .controls button {
+    margin-left: 0.5rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #007acc;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.header .controls button:disabled {
+    background-color: #999;
+    cursor: default;
+}
+
+.header .controls button:not(:disabled):hover {
+    background-color: #005ea6;
+}
+
+.game-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid #ddd;
+    background-color: #fafafa;
+}
+
+.circle {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(30, 144, 255, 0.8);
+    border: 2px solid #1e90ff;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.circle.armored {
+    background-color: rgba(178, 34, 34, 0.7);
+    border: 3px solid #8b0000;
+}
+
+.circle.damaged {
+    background-color: rgba(255, 140, 0, 0.7);
+    border-color: #ff8c00;
+}
