@@ -150,8 +150,8 @@ body {
 /* Header and scoreboard */
 .page-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    justify-content: flex-start;
+    align-items: center;
     padding: 1rem;
     gap: 1rem;
 }
@@ -172,11 +172,13 @@ body {
     flex-direction: row;
     align-items: center;
     gap: 0.6rem;
-    /* allow the timer bar to grow if space permits */
+    /* Allow children to occupy the full horizontal width of the header */
     flex-wrap: nowrap;
-    /* Minimum width to ensure the timer bar remains visible */
-    min-width: 16rem;
-    flex-shrink: 0;
+    width: 100%;
+    /* Let this element grow so the timer bar can expand */
+    flex-grow: 1;
+    /* Remove the hard minimum width and allow it to shrink on small screens */
+    min-width: 0;
 }
 .score-info {
     display: flex;
@@ -204,7 +206,10 @@ body {
 /* Timer container holds the progress bar.  Fixed width to match design */
 .timer-container {
     position: relative;
-    width: 9rem;
+    /* Grow to fill available horizontal space */
+    flex-grow: 1;
+    width: 100%;
+    min-width: 0;
     height: 0.35rem;
     background-color: var(--bg-panel);
     border-radius: 6px;
@@ -227,6 +232,54 @@ body {
     font-size: 0.75rem;
     color: var(--text-primary);
     margin-left: 0.5rem;
+}
+
+/* Help button styling */
+.help-btn {
+    background-color: var(--bg-panel);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 1rem;
+    line-height: 1.6rem;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.6rem;
+    transition: background-color 0.2s;
+}
+.help-btn:hover {
+    background-color: var(--primary-color);
+}
+
+/* Close button for help overlay */
+.close-btn {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+/* Style specific to help overlay content */
+.help-content {
+    position: relative;
+    max-width: 500px;
+}
+.help-legend {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    font-size: 0.85rem;
 }
 
 /* Circles with dark theme colours */
