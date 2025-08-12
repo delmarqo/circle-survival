@@ -24,6 +24,9 @@
     const helpBtn = document.getElementById('help-btn');
     const helpOverlay = document.getElementById('help-overlay');
     const closeHelpBtn = document.getElementById('close-help-btn');
+    // Debug elements inside help overlay
+    const debugBtn = document.getElementById('debug-btn');
+    const debugOptions = document.getElementById('debug-options');
     // Track whether the game should resume automatically after closing help
     let resumeAfterHelp = false;
 
@@ -34,10 +37,23 @@
     let paused = false;
     let currentLevel = 1;
     let timeLeft = 30;
-    let spawnInterval = 2000; // milliseconds until next spawn
-    let spawnAcceleration = 0.9; // factor applied to spawn interval after each spawn
+    // base spawn interval (affected by level and spawn acceleration)
+    let baseSpawnInterval = 2000; // milliseconds until next spawn before modifiers
+    // current spawn interval taking into account modifiers like time warp
+    let spawnInterval = baseSpawnInterval;
+    let spawnAcceleration = 0.9; // factor applied to base spawn interval after each spawn
     let lastUpdateTime = 0;
     let score = 0;
+    // Time warp configuration for higher levels (start at level 6)
+    const timeWarpConfig = {
+        interval: 8,     // seconds until next warp
+        duration: 3,     // duration of warp
+        factor: 0.5      // multiplier on spawn interval during warp
+    };
+    // Track time warp state
+    let warpActive = false;
+    let nextWarpAt = timeWarpConfig.interval; // next warp trigger time (seconds since level start)
+    let warpEndAt = 0; // time when warp ends (seconds since level start)
 
     const BASE_SPAWN_INTERVAL = 2000;
     const MIN_SPAWN_INTERVAL = 300;
@@ -105,6 +121,36 @@
         });
     }
 
+    // Debug functionality: create level buttons and toggle panel
+    if (debugBtn && debugOptions) {
+        // generate buttons for levels 1 through 6
+        for (let i = 1; i <= 6; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = 'L' + i;
+            btn.dataset.level = i.toString();
+            btn.addEventListener('click', () => {
+                // jump directly to selected level
+                currentLevel = parseInt(btn.dataset.level, 10);
+                // hide debug options and help overlay
+                debugOptions.classList.add('hidden');
+                helpOverlay.classList.add('hidden');
+                // stop current game if running
+                gameRunning = false;
+                paused = false;
+                clearTimeout(spawnTimeoutId);
+                cancelAnimationFrame(animationFrameId);
+                // reset state for selected level
+                resetGame();
+                // start the selected level immediately
+                startLevel();
+            });
+            debugOptions.appendChild(btn);
+        }
+        debugBtn.addEventListener('click', () => {
+            debugOptions.classList.toggle('hidden');
+        });
+    }
+
     /**
      * Show the help overlay and pause the game if necessary.
      */
@@ -145,19 +191,26 @@
         circles.forEach(c => c.element.remove());
         circles = [];
         timeLeft = 30;
-        // set spawnInterval based on current level (accelerates each level)
-        spawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        // set spawn intervals based on current level (accelerates each level)
+        baseSpawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        spawnInterval = baseSpawnInterval;
         spawnAcceleration = 0.9;
         updateUI();
+        // reset time warp state
+        warpActive = false;
+        nextWarpAt = timeWarpConfig.interval;
+        warpEndAt = 0;
     }
 
     // Spawn the next circle after current spawnInterval
     function spawnNext() {
         spawnTimeoutId = setTimeout(() => {
             spawnCircle();
-            // accelerate spawn interval for faster spawning
-            spawnInterval *= spawnAcceleration;
-            spawnInterval = Math.max(spawnInterval, 300); // cap minimum interval
+            // accelerate base spawn interval for faster spawning
+            baseSpawnInterval *= spawnAcceleration;
+            baseSpawnInterval = Math.max(baseSpawnInterval, MIN_SPAWN_INTERVAL);
+            // apply time warp if active
+            spawnInterval = warpActive ? baseSpawnInterval * timeWarpConfig.factor : baseSpawnInterval;
             spawnNext();
         }, spawnInterval);
     }
@@ -182,21 +235,42 @@
             growth: 20, // pixels per second
             clicks: 1,
             driftX: 0,
-            driftY: 0
+            driftY: 0,
+            type: 'normal',
+            fuseTimeLeft: null
         };
-        // Level 2: some circles are armored and require two clicks
-        if (currentLevel >= 2 && Math.random() < 0.2) {
-            circle.clicks = 2;
-            elem.classList.add('armored');
+        // Determine special types based on level
+        let special = null;
+        // Level 5+: fuse circles spawn with some probability
+        if (currentLevel >= 5 && Math.random() < 0.25) {
+            special = 'fuse';
+        } else if (currentLevel >= 4 && Math.random() < 0.3) {
+            // Level 4+: splitter circles spawn
+            special = 'splitter';
         }
-        // Level 3: some circles drift
-        if (currentLevel >= 3 && Math.random() < 0.5) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 40; // pixels per second
-            circle.driftX = Math.cos(angle) * speed;
-            circle.driftY = Math.sin(angle) * speed;
-            // add drifter class for styling
-            elem.classList.add('drifter');
+        if (special === 'fuse') {
+            circle.type = 'fuse';
+            circle.fuseTimeLeft = 3.5; // seconds
+            elem.classList.add('fuse');
+        } else if (special === 'splitter') {
+            circle.type = 'splitter';
+            elem.classList.add('splitter');
+        } else {
+            // Non-special circles may be armored or drifter at appropriate levels
+            if (currentLevel >= 2 && Math.random() < 0.2) {
+                circle.clicks = 2;
+                circle.type = 'armored';
+                elem.classList.add('armored');
+            }
+            if (currentLevel >= 3 && Math.random() < 0.5) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 40; // pixels per second
+                circle.driftX = Math.cos(angle) * speed;
+                circle.driftY = Math.sin(angle) * speed;
+                circle.type = 'drifter';
+                // add drifter class for styling
+                elem.classList.add('drifter');
+            }
         }
         // set initial size and position
         updateCircleStyle(circle);
@@ -208,6 +282,14 @@
                 circle.clicks--;
                 elem.classList.add('damaged');
             } else {
+                // handle special types on pop
+                if (circle.type === 'splitter') {
+                    // spawn children before removing
+                    spawnSplitterChildren(circle);
+                } else if (circle.type === 'fuse') {
+                    // popping a fuse triggers a beneficial shockwave: shrink neighbors
+                    handleFusePop(circle, true);
+                }
                 removeCircle(circle);
                 // increment score for each circle popped
                 score++;
@@ -236,6 +318,67 @@
         circle.element.remove();
     }
 
+    /**
+     * Spawn two child circles when a splitter circle is popped.
+     * Children inherit position and half the radius, increased growth, and may drift.
+     * @param {Object} parent The parent circle being split
+     */
+    function spawnSplitterChildren(parent) {
+        for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const childElem = document.createElement('div');
+            childElem.className = 'circle normal';
+            const child = {
+                element: childElem,
+                x: parent.x + Math.cos(angle) * parent.radius,
+                y: parent.y + Math.sin(angle) * parent.radius,
+                radius: Math.max(10, parent.radius / 2),
+                growth: parent.growth * 1.2,
+                clicks: 1,
+                driftX: 0,
+                driftY: 0,
+                type: 'normal',
+                fuseTimeLeft: null
+            };
+            // random drift on children to give them motion
+            if (Math.random() < 0.5) {
+                const driftAngle = Math.random() * Math.PI * 2;
+                const speed = 30;
+                child.driftX = Math.cos(driftAngle) * speed;
+                child.driftY = Math.sin(driftAngle) * speed;
+                child.type = 'drifter';
+                childElem.classList.add('drifter');
+            }
+            updateCircleStyle(child);
+            childElem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!gameRunning || paused) return;
+                // child circles pop on one click
+                removeCircle(child);
+                score++;
+                updateUI();
+            });
+            gameArea.appendChild(childElem);
+            circles.push(child);
+        }
+    }
+
+    /**
+     * Handle fuse explosion or pop.
+     * If popped by player (isGood=true), shrink neighbors; if exploded naturally (isGood=false), enlarge neighbors.
+     * @param {Object} fuseCircle The fuse circle triggering the effect
+     * @param {boolean} isGood Whether the fuse was popped by the player
+     */
+    function handleFusePop(fuseCircle, isGood) {
+        const factor = isGood ? 0.8 : 1.2;
+        for (const c of circles) {
+            if (c === fuseCircle) continue;
+            c.radius *= factor;
+            c.radius = Math.max(c.radius, 5);
+            updateCircleStyle(c);
+        }
+    }
+
     // Main update loop using requestAnimationFrame
     function update(timestamp) {
         if (!gameRunning) return;
@@ -251,6 +394,24 @@
             levelComplete();
             return;
         }
+        // calculate elapsed time since start of level
+        const elapsed = 30 - timeLeft;
+        // handle time warp events for levels 6 and above
+        if (currentLevel >= 6) {
+            if (!warpActive && elapsed >= nextWarpAt) {
+                // begin warp
+                warpActive = true;
+                warpEndAt = nextWarpAt + timeWarpConfig.duration;
+                spawnInterval = baseSpawnInterval * timeWarpConfig.factor;
+                timerBar.classList.add('warp-active');
+            } else if (warpActive && elapsed >= warpEndAt) {
+                // end warp
+                warpActive = false;
+                spawnInterval = baseSpawnInterval;
+                nextWarpAt += timeWarpConfig.interval;
+                timerBar.classList.remove('warp-active');
+            }
+        }
         // update each circle
         const rect = gameArea.getBoundingClientRect();
         const maxR = Math.min(rect.width, rect.height) / 2;
@@ -260,6 +421,17 @@
             // move if drifting
             circle.x += circle.driftX * dt;
             circle.y += circle.driftY * dt;
+            // update fuse countdown and explosion for fuse circles
+            if (circle.type === 'fuse' && circle.fuseTimeLeft !== null) {
+                circle.fuseTimeLeft -= dt;
+                if (circle.fuseTimeLeft <= 0) {
+                    // fuse exploded naturally - enlarge neighbors
+                    handleFusePop(circle, false);
+                    removeCircle(circle);
+                    // skip further updates for this circle
+                    continue;
+                }
+            }
             // bounce off walls if drifting
             if (circle.driftX !== 0 || circle.driftY !== 0) {
                 if (circle.x - circle.radius < 0) {
@@ -318,9 +490,14 @@
         timeLeft = 30;
         score = 0;
         // adjust spawn interval for next level (slightly faster each level)
-        spawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        baseSpawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        spawnInterval = baseSpawnInterval;
         spawnAcceleration = 0.9;
         updateUI();
+        // reset time warp state for new level
+        warpActive = false;
+        nextWarpAt = timeWarpConfig.interval;
+        warpEndAt = 0;
         // prepare overlay for next level
         if (overlay) {
             overlayTitle.textContent = `Level ${completedLevel} complete!`;

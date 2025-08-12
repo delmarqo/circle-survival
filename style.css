@@ -11,6 +11,11 @@
     --circle-armored: rgba(102, 49, 169, 0.7);
     --circle-drifter: rgba(15, 157, 88, 0.7);
     --circle-border-normal: #00a6ff;
+    /* Colours for new circle types */
+    --circle-splitter: rgba(250, 191, 59, 0.75);
+    --circle-fuse: rgba(255, 82, 82, 0.75);
+    --circle-border-splitter: #f3c14d;
+    --circle-border-fuse: #ff5252;
 }
 
 body {
@@ -296,6 +301,14 @@ body {
     background-color: var(--circle-drifter);
     border-color: #0f9d58;
 }
+.circle.splitter {
+    background-color: var(--circle-splitter);
+    border-color: var(--circle-border-splitter);
+}
+.circle.fuse {
+    background-color: var(--circle-fuse);
+    border-color: var(--circle-border-fuse);
+}
 .circle.damaged {
     background-color: rgba(255, 140, 0, 0.8);
     border-color: #ff8c00;
@@ -391,6 +404,50 @@ body {
 }
 .dot.drifter {
     background-color: var(--circle-drifter);
+}
+.dot.splitter {
+    background-color: var(--circle-splitter);
+}
+.dot.fuse {
+    background-color: var(--circle-fuse);
+}
+/* Timer bar colour change during time warp */
+.timer-bar.warp-active {
+    background-color: #ffa500;
+}
+
+/* Debug controls in help overlay */
+.debug-controls {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+.debug-controls .secondary-btn {
+    margin-bottom: 0.5rem;
+}
+.debug-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+}
+.debug-options button {
+    background-color: var(--bg-panel);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.debug-options button:hover {
+    background-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+/* Ensure debug options can be hidden */
+.debug-options.hidden {
+    display: none !important;
 }
 .actions {
     display: flex;
