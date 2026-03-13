@@ -4,39 +4,209 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Circle Survival</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+:root {
+    --bg-main: #07192f;
+    --bg-panel: #0b2a4c;
+    --text-primary: #ffffff;
+    --text-secondary: #a5b9d2;
+    --primary-color: #007acc;
+    --primary-hover: #005ea6;
+    --circle-normal: rgba(0, 166, 255, 0.7);
+    --circle-armored: rgba(102, 49, 169, 0.7);
+    --circle-drifter: rgba(15, 157, 88, 0.7);
+    --circle-border-normal: #00a6ff;
+    --circle-splitter: rgba(250, 191, 59, 0.75);
+    --circle-fuse: rgba(255, 82, 82, 0.75);
+    --circle-border-splitter: #f3c14d;
+    --circle-border-fuse: #ff5252;
+}
+body {
+    margin: 0; padding: 0; font-family: Arial, sans-serif;
+    display: flex; flex-direction: column;
+    height: calc(100vh - env(safe-area-inset-bottom));
+    overflow: hidden; overscroll-behavior: none;
+    background-color: var(--bg-main); color: var(--text-primary);
+}
+.game-area {
+    flex: 1; position: relative; overflow: hidden;
+    border: 1px solid var(--bg-panel); border-radius: 12px; background-color: transparent;
+}
+.circle {
+    position: absolute; border-radius: 50%;
+    background-color: rgba(30,144,255,0.8); border: 2px solid #1e90ff;
+    cursor: pointer; box-sizing: border-box;
+    transition: background-color 0.15s, border-color 0.15s;
+    z-index: 10;
+}
+.circle.normal { background-color: var(--circle-normal); border-color: var(--circle-border-normal); }
+.circle.armored { background-color: var(--circle-armored); border-color: #5e2d9f; border-width: 3px; }
+.circle.drifter { background-color: var(--circle-drifter); border-color: #0f9d58; }
+.circle.splitter { background-color: var(--circle-splitter); border-color: var(--circle-border-splitter); }
+.circle.fuse { background-color: var(--circle-fuse); border-color: var(--circle-border-fuse); }
+.circle.damaged { background-color: rgba(255, 140, 0, 0.8); border-color: #ff8c00; }
+.particle {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    will-change: transform, opacity; z-index: 500;
+}
+
+/* ── Bomb (TNT square) ── */
+.bomb {
+    position: absolute; width: 64px; height: 64px;
+    cursor: pointer; z-index: 600; box-sizing: border-box;
+    image-rendering: pixelated;
+}
+.bomb canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+
+/* ── Bomb bank ── */
+.bomb-bank {
+    position: absolute; top: 0.4rem; right: 0.5rem;
+    display: flex; gap: 0.35rem; z-index: 100;
+    align-items: center;
+}
+.bomb-bank-slot {
+    width: 28px; height: 28px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background-color: rgba(11, 42, 76, 0.6);
+    display: flex; align-items: center; justify-content: center;
+    cursor: default; opacity: 0.3;
+    transition: opacity 0.2s, transform 0.15s;
+    overflow: hidden;
+}
+.bomb-bank-slot.filled {
+    opacity: 1; cursor: pointer;
+    border-color: rgba(255, 140, 0, 0.6);
+    background-color: rgba(40, 30, 10, 0.7);
+}
+.bomb-bank-slot.filled:hover {
+    transform: scale(1.15);
+    border-color: #ff8c00;
+}
+.bomb-bank-slot canvas { width: 22px; height: 22px; image-rendering: pixelated; }
+
+/* ── Shockwave ring ── */
+.shockwave {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    border: 3px solid rgba(255, 140, 0, 0.8);
+    box-shadow: 0 0 20px rgba(255, 100, 0, 0.4), inset 0 0 20px rgba(255, 100, 0, 0.1);
+    z-index: 450;
+}
+
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.65); display: flex;
+    justify-content: center; align-items: center; z-index: 1000;
+}
+.hidden { display: none; }
+.overlay-content {
+    background-color: var(--bg-panel); padding: 2rem 3rem; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    color: var(--text-primary); max-width: 90%; text-align: center;
+}
+.page-header { display: flex; justify-content: flex-start; align-items: center; padding: 1rem; gap: 1rem; }
+.score-area {
+    display: flex; flex-direction: row; align-items: center; gap: 0.6rem;
+    flex-wrap: nowrap; width: 100%; flex-grow: 1; min-width: 0;
+}
+.score-info { display: flex; gap: 0.4rem; }
+.score-box {
+    background-color: var(--bg-panel); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;
+    min-width: 3rem; box-sizing: border-box;
+}
+.score-label { font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+.score-value { font-size: 1rem; font-weight: bold; }
+.timer-container {
+    position: relative; flex-grow: 1; width: 100%; min-width: 0;
+    height: 0.35rem; background-color: var(--bg-panel); border-radius: 6px; overflow: hidden;
+}
+.timer-bar {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+    background-color: var(--primary-color); border-radius: 6px; transition: width 0.1s linear;
+}
+.timer-label { font-size: 0.75rem; color: var(--text-primary); margin-left: 0.5rem; }
+.help-btn {
+    background-color: var(--bg-panel); color: var(--text-primary);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
+    width: 1.6rem; height: 1.6rem; font-size: 1rem; line-height: 1.6rem;
+    text-align: center; cursor: pointer; padding: 0; margin-left: 0.6rem;
+    transition: background-color 0.2s;
+}
+.help-btn:hover { background-color: var(--primary-color); }
+.close-btn {
+    position: absolute; top: 0.3rem; right: 0.3rem; background: transparent;
+    border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer;
+}
+.close-btn:hover { color: var(--text-primary); }
+.help-content { position: relative; max-width: 500px; }
+.help-legend { margin-top: 1rem; display: flex; gap: 1.5rem; justify-content: center; font-size: 0.85rem; flex-wrap: wrap; }
+.overlay-title { margin-top: 0; margin-bottom: 0.5rem; font-size: 1.75rem; font-weight: 600; }
+.overlay-desc { margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary); }
+.overlay-buttons { display: flex; gap: 1rem; justify-content: center; }
+.primary-btn, .secondary-btn {
+    padding: 0.5rem 1rem; font-size: 0.9rem; border-radius: 6px;
+    cursor: pointer; border: none; transition: background-color 0.2s, color 0.2s;
+}
+.primary-btn { background-color: var(--primary-color); color: var(--text-primary); }
+.primary-btn:hover { background-color: var(--primary-hover); }
+.secondary-btn { background-color: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); }
+.secondary-btn:hover { background-color: var(--primary-color); color: var(--text-primary); }
+.bottom-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 1rem; background-color: var(--bg-main); border-top: 1px solid var(--bg-panel);
+}
+.legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 0.3rem; }
+.dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; display: inline-block; }
+.dot.normal { background-color: var(--circle-normal); }
+.dot.armored { background-color: var(--circle-armored); }
+.dot.drifter { background-color: var(--circle-drifter); }
+.dot.splitter { background-color: var(--circle-splitter); }
+.dot.fuse { background-color: var(--circle-fuse); }
+.dot.bomb-dot { width: 0.6rem; height: 0.6rem; border-radius: 2px; background-color: #c1440e; border: 1px solid #ff8c00; }
+.timer-bar.warp-active { background-color: #ffa500; }
+.debug-controls { margin-top: 1.5rem; text-align: center; }
+.debug-controls .secondary-btn { margin-bottom: 0.5rem; }
+.debug-options { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+.debug-options button {
+    background-color: var(--bg-panel); color: var(--primary-color);
+    border: 1px solid var(--primary-color); padding: 0.3rem 0.6rem;
+    font-size: 0.8rem; border-radius: 4px; cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.debug-options button:hover { background-color: var(--primary-color); color: var(--text-primary); }
+.debug-options.hidden { display: none !important; }
+.actions { display: flex; gap: 0.5rem; }
+.action-btn {
+    padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px; border: none;
+    cursor: pointer; background-color: var(--bg-panel); color: var(--text-primary);
+    transition: background-color 0.2s, color 0.2s;
+}
+.action-btn:disabled { opacity: 0.4; cursor: default; }
+.action-btn:not(:disabled):hover { background-color: var(--primary-color); color: var(--text-primary); }
+    </style>
 </head>
 <body class="dark">
-    <!-- Header with scoreboard and controls (title removed for compactness) -->
     <header class="page-header">
         <div class="score-area">
             <div class="score-info">
-                <div class="score-box">
-                    <div class="score-label">LEVEL</div>
-                    <div id="level" class="score-value">1</div>
-                </div>
-                <div class="score-box">
-                    <div class="score-label">SCORE</div>
-                    <div id="score" class="score-value">0</div>
-                </div>
-                <div class="score-box">
-                    <div class="score-label">BEST</div>
-                    <div id="best" class="score-value">0</div>
-                </div>
+                <div class="score-box"><div class="score-label">LEVEL</div><div id="level" class="score-value">1</div></div>
+                <div class="score-box"><div class="score-label">SCORE</div><div id="score" class="score-value">0</div></div>
+                <div class="score-box"><div class="score-label">BEST</div><div id="best" class="score-value">0</div></div>
             </div>
-            <!-- Timer container will expand to fill remaining horizontal space -->
-            <div class="timer-container">
-                <div id="timer-bar" class="timer-bar"></div>
-            </div>
-            <!-- Numeric time label -->
+            <div class="timer-container"><div id="timer-bar" class="timer-bar"></div></div>
             <span id="time-label" class="timer-label">30</span>
-            <!-- Help button to show game instructions -->
             <button id="help-btn" class="help-btn" title="Help">?</button>
         </div>
     </header>
-    <!-- Main game area -->
-    <div id="game-area" class="game-area"></div>
-    <!-- Bottom bar with legend and actions -->
+    <div id="game-area" class="game-area">
+        <!-- Bomb bank: 3 slots in top-right of game area -->
+        <div class="bomb-bank" id="bomb-bank">
+            <div class="bomb-bank-slot" id="bomb-slot-0"></div>
+            <div class="bomb-bank-slot" id="bomb-slot-1"></div>
+            <div class="bomb-bank-slot" id="bomb-slot-2"></div>
+        </div>
+    </div>
     <div class="bottom-bar">
         <div class="legend">
             <span class="legend-item"><span class="dot normal"></span>Normal</span>
@@ -44,14 +214,13 @@
             <span class="legend-item"><span class="dot drifter"></span>Drifter</span>
             <span class="legend-item"><span class="dot splitter"></span>Splitter</span>
             <span class="legend-item"><span class="dot fuse"></span>Fuse</span>
+            <span class="legend-item"><span class="dot bomb-dot"></span>Bomb</span>
         </div>
         <div class="actions">
             <button id="resume-btn" class="action-btn" disabled>Resume</button>
             <button id="restart-btn" class="action-btn" disabled>Restart Level</button>
         </div>
     </div>
-    <!-- Overlay for start and level transitions -->
-    <!-- Level overlay is visible on page load. It hides on start or level completion -->
     <div id="level-overlay" class="overlay">
         <div class="overlay-content">
             <h2 id="overlay-title" class="overlay-title">Ready?</h2>
@@ -62,30 +231,518 @@
             </div>
         </div>
     </div>
-
-    <!-- Help overlay displays title, instructions and legend when the help button is clicked -->
     <div id="help-overlay" class="overlay hidden">
         <div class="overlay-content help-content">
             <button id="close-help-btn" class="close-btn" aria-label="Close help">&times;</button>
             <h2 class="overlay-title">Circle Survival</h2>
             <p class="overlay-desc">Pop the circles before one engulfs the board. Survive&nbsp;30&nbsp;seconds per level.</p>
             <p class="overlay-desc">Click circles before they grow too large. Armored circles require two clicks starting on level&nbsp;2. Drifter circles move across the screen from level&nbsp;3 onward.</p>
+            <p class="overlay-desc"><strong>Bombs</strong> fly across the screen when 15+ circles are active. Click to detonate on the spot, or let it pass to bank it (max&nbsp;3). Use banked bombs from the icons in the top-right corner.</p>
             <div class="legend help-legend">
                 <span class="legend-item"><span class="dot normal"></span>Normal</span>
                 <span class="legend-item"><span class="dot armored"></span>Armored</span>
                 <span class="legend-item"><span class="dot drifter"></span>Drifter</span>
                 <span class="legend-item"><span class="dot splitter"></span>Splitter</span>
                 <span class="legend-item"><span class="dot fuse"></span>Fuse</span>
+                <span class="legend-item"><span class="dot bomb-dot"></span>Bomb</span>
             </div>
-            <!-- Debug section to jump to specific levels -->
             <div id="debug-controls" class="debug-controls">
                 <button id="debug-btn" class="secondary-btn">Debug</button>
-                <div id="debug-options" class="debug-options hidden">
-                    <!-- Level buttons will be generated by script -->
-                </div>
+                <div id="debug-options" class="debug-options hidden"></div>
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script>
+(() => {
+    const gameArea = document.getElementById('game-area');
+    const startBtn = document.getElementById('start-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const resetProgressBtn = document.getElementById('reset-progress-btn');
+    const levelSpan = document.getElementById('level');
+    const scoreSpan = document.getElementById('score');
+    const bestSpan = document.getElementById('best');
+    const timerBar = document.getElementById('timer-bar');
+    const timeLabel = document.getElementById('time-label');
+    const overlay = document.getElementById('level-overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
+    const startLevelIndexSpan = document.getElementById('start-level-index');
+    const helpBtn = document.getElementById('help-btn');
+    const helpOverlay = document.getElementById('help-overlay');
+    const closeHelpBtn = document.getElementById('close-help-btn');
+    const debugBtn = document.getElementById('debug-btn');
+    const debugOptions = document.getElementById('debug-options');
+    let resumeAfterHelp = false;
+    let circles = [];
+    let particles = [];
+    let spawnTimeoutId = null;
+    let animationFrameId = null;
+    let gameRunning = false;
+    let paused = false;
+    let currentLevel = 1;
+    let timeLeft = 30;
+    let baseSpawnInterval = 2000;
+    let spawnInterval = baseSpawnInterval;
+    let spawnAcceleration = 0.9;
+    let lastUpdateTime = 0;
+    let score = 0;
+    const timeWarpConfig = { interval: 8, duration: 3, factor: 0.5 };
+    let warpActive = false;
+    let nextWarpAt = timeWarpConfig.interval;
+    let warpEndAt = 0;
+    const BASE_SPAWN_INTERVAL = 2000;
+    const MIN_SPAWN_INTERVAL = 300;
+
+    // ── Bomb state ──
+    const MAX_BANKED_BOMBS = 3;
+    let bankedBombs = 0;
+    let activeBomb = null; // { element, x, y, speed, direction }
+    let bombCooldown = 0;  // seconds until next bomb can spawn
+    const BOMB_CHECK_THRESHOLD = 15;
+    const BOMB_SPEED = 220; // px/sec
+    const BOMB_SIZE = 64;
+    const BOMB_COOLDOWN = 5; // seconds between bombs
+
+    // ── Colour map for particles ──
+    const typeColors = {
+        normal:   { fill: '#00a6ff', glow: '#00c8ff' },
+        armored:  { fill: '#6631a9', glow: '#9b59d0' },
+        drifter:  { fill: '#0f9d58', glow: '#34d88a' },
+        splitter: { fill: '#fabf3b', glow: '#ffe066' },
+        fuse:     { fill: '#ff5252', glow: '#ff8a80' },
+        damaged:  { fill: '#ff8c00', glow: '#ffb347' },
+        bomb:     { fill: '#ff6600', glow: '#ffaa44' }
+    };
+
+    // ── Draw a pixel-art TNT block on a canvas ──
+    function drawTNT(canvas, size) {
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        // Brown body
+        ctx.fillStyle = '#8B4513'; ctx.fillRect(0, 0, size, size);
+        // Darker border
+        ctx.strokeStyle = '#5C2D0E'; ctx.lineWidth = Math.max(1, size / 16);
+        ctx.strokeRect(0, 0, size, size);
+        // Red band across middle
+        const bandH = Math.max(4, size * 0.35);
+        const bandY = (size - bandH) / 2;
+        ctx.fillStyle = '#C1440E'; ctx.fillRect(size * 0.08, bandY, size * 0.84, bandH);
+        // "TNT" text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold ' + Math.max(6, Math.floor(size * 0.28)) + 'px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('TNT', size / 2, size / 2 + 0.5);
+        // Top stripe / fuse nub
+        ctx.fillStyle = '#3E3E3E';
+        const fuseW = Math.max(2, size * 0.12);
+        ctx.fillRect((size - fuseW) / 2, 0, fuseW, size * 0.15);
+    }
+
+    // ── Bomb bank UI ──
+    const bombSlots = [
+        document.getElementById('bomb-slot-0'),
+        document.getElementById('bomb-slot-1'),
+        document.getElementById('bomb-slot-2')
+    ];
+    // Pre-draw mini TNT canvases for each slot
+    bombSlots.forEach((slot, i) => {
+        const c = document.createElement('canvas');
+        drawTNT(c, 22);
+        slot.appendChild(c);
+        slot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!gameRunning || paused) return;
+            if (bankedBombs > 0) useBankedBomb();
+        });
+    });
+
+    function updateBombBankUI() {
+        for (let i = 0; i < MAX_BANKED_BOMBS; i++) {
+            if (i < bankedBombs) bombSlots[i].classList.add('filled');
+            else bombSlots[i].classList.remove('filled');
+        }
+    }
+
+    // ── Spawn a live bomb that flies across the screen ──
+    function spawnBomb() {
+        if (activeBomb) return; // one at a time
+        const rect = gameArea.getBoundingClientRect();
+        const direction = Math.random() < 0.5 ? 1 : -1; // 1 = left→right, -1 = right→left
+        const startX = direction === 1 ? -BOMB_SIZE : rect.width + BOMB_SIZE;
+        const y = 40 + Math.random() * (rect.height - 100);
+
+        const elem = document.createElement('div');
+        elem.className = 'bomb';
+        const canvas = document.createElement('canvas');
+        drawTNT(canvas, BOMB_SIZE);
+        elem.appendChild(canvas);
+        elem.style.left = startX + 'px';
+        elem.style.top = y + 'px';
+        gameArea.appendChild(elem);
+
+        activeBomb = { element: elem, x: startX, y: y, speed: BOMB_SPEED, direction: direction };
+
+        elem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!gameRunning || paused || !activeBomb) return;
+            detonateBomb(activeBomb.x + BOMB_SIZE / 2, activeBomb.y + BOMB_SIZE / 2);
+            removeBomb();
+        });
+    }
+
+    function removeBomb() {
+        if (!activeBomb) return;
+        activeBomb.element.remove();
+        activeBomb = null;
+    }
+
+    function updateBomb(dt) {
+        if (!activeBomb) {
+            // Check if we should spawn one
+            bombCooldown -= dt;
+            if (bombCooldown <= 0 && circles.length >= BOMB_CHECK_THRESHOLD) {
+                spawnBomb();
+                bombCooldown = BOMB_COOLDOWN;
+            }
+            return;
+        }
+        const rect = gameArea.getBoundingClientRect();
+        activeBomb.x += activeBomb.speed * activeBomb.direction * dt;
+        activeBomb.element.style.left = activeBomb.x + 'px';
+
+        // Check if bomb exited screen
+        const exitedRight = activeBomb.direction === 1 && activeBomb.x > rect.width + BOMB_SIZE;
+        const exitedLeft = activeBomb.direction === -1 && activeBomb.x < -BOMB_SIZE * 2;
+        if (exitedRight || exitedLeft) {
+            // Bank it if room
+            if (bankedBombs < MAX_BANKED_BOMBS) {
+                bankedBombs++;
+                updateBombBankUI();
+            }
+            removeBomb();
+        }
+    }
+
+    // ── Detonate: destroy circles within 80% of screen radius from a point ──
+    function detonateBomb(cx, cy) {
+        const rect = gameArea.getBoundingClientRect();
+        const blastRadius = Math.max(rect.width, rect.height) * 0.40; // 80% of half = 40% of full
+
+        // Shockwave ring animation
+        spawnShockwave(cx, cy, blastRadius);
+
+        // Big particle burst at detonation point
+        spawnParticles(cx, cy, 'bomb', 25, 250, true);
+
+        // Destroy circles within blast radius (sorted by distance so inner ones go first)
+        const toDestroy = [];
+        for (const circle of circles) {
+            const dx = circle.x - cx;
+            const dy = circle.y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= blastRadius + circle.radius) {
+                toDestroy.push(circle);
+            }
+        }
+        // Stagger destruction slightly for visual effect
+        toDestroy.forEach((circle, i) => {
+            setTimeout(() => {
+                if (circles.indexOf(circle) < 0) return; // already removed
+                const popColor = circle.element.classList.contains('damaged') ? 'damaged' : circle.type;
+                const count = Math.min(20, Math.max(8, Math.floor(circle.radius / 4)));
+                spawnParticles(circle.x, circle.y, popColor, count, 140, true);
+                removeCircle(circle);
+                score++;
+                updateUI();
+            }, i * 30);
+        });
+    }
+
+    function useBankedBomb() {
+        if (bankedBombs <= 0) return;
+        bankedBombs--;
+        updateBombBankUI();
+        const rect = gameArea.getBoundingClientRect();
+        detonateBomb(rect.width / 2, rect.height / 2);
+    }
+
+    // ── Shockwave expanding ring ──
+    function spawnShockwave(cx, cy, maxRadius) {
+        const ring = document.createElement('div');
+        ring.className = 'shockwave';
+        ring.style.left = cx + 'px';
+        ring.style.top = cy + 'px';
+        ring.style.width = '0px'; ring.style.height = '0px';
+        ring.style.transform = 'translate(-50%, -50%)';
+        gameArea.appendChild(ring);
+
+        const duration = 350; // ms
+        const start = performance.now();
+        function animateRing(now) {
+            const t = Math.min(1, (now - start) / duration);
+            const r = maxRadius * 2 * t;
+            ring.style.width = r + 'px'; ring.style.height = r + 'px';
+            ring.style.opacity = (1 - t * t).toFixed(2);
+            ring.style.borderWidth = Math.max(1, 3 * (1 - t)) + 'px';
+            if (t < 1) requestAnimationFrame(animateRing);
+            else ring.remove();
+        }
+        requestAnimationFrame(animateRing);
+    }
+
+    // ── Particles ──
+    function spawnParticles(x, y, colorKey, count, energy, isFinalPop) {
+        const colors = typeColors[colorKey] || typeColors.normal;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = energy * (0.5 + Math.random());
+            const size = isFinalPop ? 3 + Math.random() * 5 : 2 + Math.random() * 3;
+            const lifetime = isFinalPop ? 0.4 + Math.random() * 0.4 : 0.25 + Math.random() * 0.25;
+            const elem = document.createElement('div');
+            elem.className = 'particle';
+            elem.style.backgroundColor = Math.random() < 0.4 ? colors.glow : colors.fill;
+            elem.style.width = size + 'px'; elem.style.height = size + 'px';
+            elem.style.left = (x - size / 2) + 'px'; elem.style.top = (y - size / 2) + 'px';
+            elem.style.opacity = '1';
+            if (isFinalPop && Math.random() < 0.3) elem.style.boxShadow = '0 0 ' + (size * 2) + 'px ' + colors.glow;
+            gameArea.appendChild(elem);
+            particles.push({ element: elem, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, life: lifetime, maxLife: lifetime, gravity: isFinalPop ? 60 + Math.random() * 40 : 20 });
+        }
+    }
+    function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i]; p.life -= dt;
+            if (p.life <= 0) { p.element.remove(); particles.splice(i, 1); continue; }
+            p.vy += p.gravity * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+            const t = p.life / p.maxLife; const cs = p.size * t;
+            p.element.style.opacity = t.toFixed(2);
+            p.element.style.width = cs + 'px'; p.element.style.height = cs + 'px';
+            p.element.style.left = (p.x - cs / 2) + 'px'; p.element.style.top = (p.y - cs / 2) + 'px';
+        }
+    }
+    function clearParticles() { particles.forEach(p => p.element.remove()); particles = []; }
+
+    // ── Event listeners ──
+    startBtn.addEventListener('click', () => { overlay.classList.add('hidden'); startLevel(); });
+    if (helpBtn) helpBtn.addEventListener('click', () => openHelp());
+    if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => closeHelp());
+    resumeBtn.addEventListener('click', () => {
+        if (!gameRunning) return;
+        paused = !paused;
+        resumeBtn.textContent = paused ? 'Resume' : 'Pause';
+        if (paused) { clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId); }
+        else { lastUpdateTime = performance.now(); spawnNext(); animationFrameId = requestAnimationFrame(update); }
+    });
+    restartBtn.addEventListener('click', () => { if (!gameRunning) return; restartLevel(); });
+    if (resetProgressBtn) {
+        resetProgressBtn.addEventListener('click', () => {
+            bestSpan.textContent = '0';
+            gameRunning = false; paused = false;
+            clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+            resetGame(); currentLevel = 1; score = 0;
+            startLevelIndexSpan.textContent = currentLevel.toString();
+            overlayTitle.textContent = 'Ready?';
+            overlayDesc.textContent = 'Click circles before they grow too large. Survive\u00a030\u00a0seconds.';
+            overlay.classList.remove('hidden');
+        });
+    }
+    if (debugBtn && debugOptions) {
+        for (let i = 1; i <= 6; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = 'L' + i; btn.dataset.level = i.toString();
+            btn.addEventListener('click', () => {
+                currentLevel = parseInt(btn.dataset.level, 10);
+                debugOptions.classList.add('hidden'); helpOverlay.classList.add('hidden');
+                gameRunning = false; paused = false;
+                clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+                resetGame(); startLevel();
+            });
+            debugOptions.appendChild(btn);
+        }
+        debugBtn.addEventListener('click', () => debugOptions.classList.toggle('hidden'));
+    }
+
+    function openHelp() {
+        if (!helpOverlay) return;
+        helpOverlay.classList.remove('hidden');
+        if (gameRunning && !paused) {
+            resumeAfterHelp = true; paused = true; resumeBtn.textContent = 'Resume';
+            clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+        } else { resumeAfterHelp = false; }
+    }
+    function closeHelp() {
+        if (!helpOverlay) return;
+        helpOverlay.classList.add('hidden');
+        if (resumeAfterHelp && gameRunning && paused) {
+            paused = false; resumeBtn.textContent = 'Pause';
+            lastUpdateTime = performance.now(); spawnNext(); animationFrameId = requestAnimationFrame(update);
+        }
+        resumeAfterHelp = false;
+    }
+    function resetGame() {
+        circles.forEach(c => c.element.remove()); circles = [];
+        clearParticles();
+        removeBomb();
+        bankedBombs = 0; bombCooldown = 3; // short initial cooldown
+        updateBombBankUI();
+        timeLeft = 30;
+        baseSpawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        spawnInterval = baseSpawnInterval; spawnAcceleration = 0.9; updateUI();
+        warpActive = false; nextWarpAt = timeWarpConfig.interval; warpEndAt = 0;
+    }
+    function spawnNext() {
+        spawnTimeoutId = setTimeout(() => {
+            spawnCircle();
+            baseSpawnInterval *= spawnAcceleration;
+            baseSpawnInterval = Math.max(baseSpawnInterval, MIN_SPAWN_INTERVAL);
+            spawnInterval = warpActive ? baseSpawnInterval * timeWarpConfig.factor : baseSpawnInterval;
+            spawnNext();
+        }, spawnInterval);
+    }
+    function spawnCircle() {
+        const rect = gameArea.getBoundingClientRect();
+        const initialRadius = 15;
+        const x = Math.random() * (rect.width - initialRadius * 2) + initialRadius;
+        const y = Math.random() * (rect.height - initialRadius * 2) + initialRadius;
+        const elem = document.createElement('div');
+        elem.className = 'circle normal';
+        const circle = { element: elem, x, y, radius: initialRadius, growth: 20, clicks: 1, driftX: 0, driftY: 0, type: 'normal', fuseTimeLeft: null };
+        let special = null;
+        if (currentLevel >= 5 && Math.random() < 0.25) special = 'fuse';
+        else if (currentLevel >= 4 && Math.random() < 0.3) special = 'splitter';
+        if (special === 'fuse') { circle.type = 'fuse'; circle.fuseTimeLeft = 3.5; elem.classList.add('fuse'); }
+        else if (special === 'splitter') { circle.type = 'splitter'; elem.classList.add('splitter'); }
+        else {
+            if (currentLevel >= 2 && Math.random() < 0.2) { circle.clicks = 2; circle.type = 'armored'; elem.classList.add('armored'); }
+            if (currentLevel >= 3 && Math.random() < 0.5) {
+                const angle = Math.random() * Math.PI * 2; const speed = 40;
+                circle.driftX = Math.cos(angle) * speed; circle.driftY = Math.sin(angle) * speed;
+                circle.type = 'drifter'; elem.classList.add('drifter');
+            }
+        }
+        updateCircleStyle(circle);
+        elem.addEventListener('click', (e) => {
+            e.stopPropagation(); if (!gameRunning || paused) return;
+            if (circle.clicks > 1) {
+                spawnParticles(circle.x, circle.y, circle.type, 8, 120, false);
+                circle.clicks--; elem.classList.add('damaged');
+            } else {
+                const popColor = elem.classList.contains('damaged') ? 'damaged' : circle.type;
+                const count = Math.min(30, Math.max(12, Math.floor(circle.radius / 3)));
+                spawnParticles(circle.x, circle.y, popColor, count, 180 + circle.radius, true);
+                if (circle.type === 'splitter') spawnSplitterChildren(circle);
+                else if (circle.type === 'fuse') handleFusePop(circle, true);
+                removeCircle(circle); score++; updateUI();
+            }
+        });
+        gameArea.appendChild(elem); circles.push(circle);
+    }
+    function updateCircleStyle(circle) {
+        const el = circle.element;
+        el.style.width = circle.radius * 2 + 'px'; el.style.height = circle.radius * 2 + 'px';
+        el.style.left = circle.x - circle.radius + 'px'; el.style.top = circle.y - circle.radius + 'px';
+    }
+    function removeCircle(circle) {
+        const idx = circles.indexOf(circle);
+        if (idx >= 0) circles.splice(idx, 1);
+        circle.element.remove();
+    }
+    function spawnSplitterChildren(parent) {
+        for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const childElem = document.createElement('div');
+            childElem.className = 'circle normal';
+            const child = { element: childElem, x: parent.x + Math.cos(angle) * parent.radius, y: parent.y + Math.sin(angle) * parent.radius, radius: Math.max(10, parent.radius / 2), growth: parent.growth * 1.2, clicks: 1, driftX: 0, driftY: 0, type: 'normal', fuseTimeLeft: null };
+            if (Math.random() < 0.5) { const da = Math.random() * Math.PI * 2; child.driftX = Math.cos(da) * 30; child.driftY = Math.sin(da) * 30; child.type = 'drifter'; childElem.classList.add('drifter'); }
+            updateCircleStyle(child);
+            childElem.addEventListener('click', (e) => {
+                e.stopPropagation(); if (!gameRunning || paused) return;
+                const count = Math.min(20, Math.max(10, Math.floor(child.radius / 3)));
+                spawnParticles(child.x, child.y, child.type, count, 160 + child.radius, true);
+                removeCircle(child); score++; updateUI();
+            });
+            gameArea.appendChild(childElem); circles.push(child);
+        }
+    }
+    function handleFusePop(fuseCircle, isGood) {
+        const factor = isGood ? 0.8 : 1.2;
+        for (const c of circles) { if (c === fuseCircle) continue; c.radius *= factor; c.radius = Math.max(c.radius, 5); updateCircleStyle(c); }
+    }
+    function update(timestamp) {
+        if (!gameRunning) return;
+        if (paused) { animationFrameId = requestAnimationFrame(update); return; }
+        const dt = (timestamp - lastUpdateTime) / 1000; lastUpdateTime = timestamp;
+        timeLeft -= dt;
+        if (timeLeft <= 0) { levelComplete(); return; }
+        const elapsed = 30 - timeLeft;
+        if (currentLevel >= 6) {
+            if (!warpActive && elapsed >= nextWarpAt) { warpActive = true; warpEndAt = nextWarpAt + timeWarpConfig.duration; spawnInterval = baseSpawnInterval * timeWarpConfig.factor; timerBar.classList.add('warp-active'); }
+            else if (warpActive && elapsed >= warpEndAt) { warpActive = false; spawnInterval = baseSpawnInterval; nextWarpAt += timeWarpConfig.interval; timerBar.classList.remove('warp-active'); }
+        }
+        const rect = gameArea.getBoundingClientRect();
+        const maxR = Math.min(rect.width, rect.height) / 2;
+        for (const circle of circles) {
+            circle.radius += circle.growth * dt;
+            circle.x += circle.driftX * dt; circle.y += circle.driftY * dt;
+            if (circle.type === 'fuse' && circle.fuseTimeLeft !== null) { circle.fuseTimeLeft -= dt; if (circle.fuseTimeLeft <= 0) { handleFusePop(circle, false); removeCircle(circle); continue; } }
+            if (circle.driftX !== 0 || circle.driftY !== 0) {
+                if (circle.x - circle.radius < 0) { circle.x = circle.radius; circle.driftX = Math.abs(circle.driftX); }
+                else if (circle.x + circle.radius > rect.width) { circle.x = rect.width - circle.radius; circle.driftX = -Math.abs(circle.driftX); }
+                if (circle.y - circle.radius < 0) { circle.y = circle.radius; circle.driftY = Math.abs(circle.driftY); }
+                else if (circle.y + circle.radius > rect.height) { circle.y = rect.height - circle.radius; circle.driftY = -Math.abs(circle.driftY); }
+            }
+            updateCircleStyle(circle);
+            if (circle.radius >= maxR) { gameOver(); return; }
+        }
+        // bombs & particles
+        updateBomb(dt);
+        updateParticles(dt);
+        updateUI(); animationFrameId = requestAnimationFrame(update);
+    }
+    function updateUI() {
+        levelSpan.textContent = currentLevel.toString(); scoreSpan.textContent = score.toString();
+        let best = parseInt(bestSpan.textContent || '0', 10);
+        if (currentLevel > best) best = currentLevel;
+        bestSpan.textContent = best.toString();
+        timeLabel.textContent = Math.max(0, Math.ceil(timeLeft)).toString();
+        timerBar.style.width = ((timeLeft / 30) * 100) + '%';
+    }
+    function levelComplete() {
+        clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+        circles.forEach(c => c.element.remove()); circles = [];
+        clearParticles(); removeBomb();
+        const completedLevel = currentLevel; currentLevel++; timeLeft = 30; score = 0;
+        baseSpawnInterval = BASE_SPAWN_INTERVAL * Math.pow(0.9, currentLevel - 1);
+        spawnInterval = baseSpawnInterval; spawnAcceleration = 0.9; updateUI();
+        warpActive = false; nextWarpAt = timeWarpConfig.interval; warpEndAt = 0;
+        // NOTE: banked bombs persist across levels
+        overlayTitle.textContent = 'Level ' + completedLevel + ' complete!';
+        overlayDesc.textContent = 'Get ready for the next level.';
+        startLevelIndexSpan.textContent = currentLevel.toString();
+        overlay.classList.remove('hidden');
+    }
+    function gameOver() {
+        gameRunning = false; clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+        circles.forEach(c => c.element.remove()); circles = [];
+        clearParticles(); removeBomb();
+        overlayTitle.textContent = 'Game Over!';
+        overlayDesc.textContent = 'You reached level ' + currentLevel + ' with a score of ' + score + '.';
+        startLevelIndexSpan.textContent = currentLevel.toString();
+        overlay.classList.remove('hidden');
+        resumeBtn.textContent = 'Pause'; resumeBtn.disabled = true; restartBtn.disabled = true;
+    }
+    function startLevel() {
+        resetGame(); gameRunning = true; paused = false; score = 0;
+        resumeBtn.disabled = false; restartBtn.disabled = false; resumeBtn.textContent = 'Pause';
+        lastUpdateTime = performance.now(); spawnNext(); animationFrameId = requestAnimationFrame(update);
+    }
+    function restartLevel() {
+        clearTimeout(spawnTimeoutId); cancelAnimationFrame(animationFrameId);
+        paused = false; score = 0; resetGame(); resumeBtn.textContent = 'Pause';
+        lastUpdateTime = performance.now(); gameRunning = true; spawnNext(); animationFrameId = requestAnimationFrame(update);
+    }
+})();
+    </script>
 </body>
 </html>
