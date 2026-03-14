@@ -337,6 +337,17 @@ body {
         bomb:     { fill: '#ff6600', glow: '#ffaa44' }
     };
 
+    // ── Haptic feedback ──
+    // Wraps navigator.vibrate (Android) — silent no-op on iOS/unsupported browsers
+    function haptic(pattern) {
+        if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+    const HAPTIC = {
+        tap:   10,          // light tap — partial hit on armored circle
+        pop:   25,          // satisfying pop — single circle destroyed
+        bomb:  [30, 20, 50] // heavy thump — bomb detonation
+    };
+
     // ── Draw a pixel-art TNT block on a canvas ──
     function drawTNT(canvas, size) {
         canvas.width = size; canvas.height = size;
@@ -448,6 +459,7 @@ body {
 
     // ── Detonate: destroy circles within 80% of screen radius from a point ──
     function detonateBomb(cx, cy) {
+        haptic(HAPTIC.bomb);
         const rect = gameArea.getBoundingClientRect();
         const blastRadius = Math.max(rect.width, rect.height) * 0.40; // 80% of half = 40% of full
 
@@ -647,9 +659,11 @@ body {
         elem.addEventListener('click', (e) => {
             e.stopPropagation(); if (!gameRunning || paused) return;
             if (circle.clicks > 1) {
+                haptic(HAPTIC.tap);
                 spawnParticles(circle.x, circle.y, circle.type, 8, 120, false);
                 circle.clicks--; elem.classList.add('damaged');
             } else {
+                haptic(HAPTIC.pop);
                 const popColor = elem.classList.contains('damaged') ? 'damaged' : circle.type;
                 const count = Math.min(30, Math.max(12, Math.floor(circle.radius / 3)));
                 spawnParticles(circle.x, circle.y, popColor, count, 180 + circle.radius, true);
@@ -680,6 +694,7 @@ body {
             updateCircleStyle(child);
             childElem.addEventListener('click', (e) => {
                 e.stopPropagation(); if (!gameRunning || paused) return;
+                haptic(HAPTIC.pop);
                 const count = Math.min(20, Math.max(10, Math.floor(child.radius / 3)));
                 spawnParticles(child.x, child.y, child.type, count, 160 + child.radius, true);
                 removeCircle(child); score++; updateUI();
