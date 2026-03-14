@@ -110,7 +110,7 @@ body {
     border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.4);
     color: var(--text-primary); max-width: 90%; text-align: center;
 }
-.page-header { display: flex; justify-content: flex-start; align-items: center; padding: 1rem; gap: 1rem; }
+.page-header { display: flex; justify-content: flex-start; align-items: center; padding: 1rem; padding-top: calc(1rem + env(safe-area-inset-top)); gap: 1rem; }
 .score-area {
     display: flex; flex-direction: row; align-items: center; gap: 0.6rem;
     flex-wrap: nowrap; width: 100%; flex-grow: 1; min-width: 0;
@@ -171,7 +171,7 @@ body {
 .secondary-btn:hover { background-color: var(--primary-color); color: var(--text-primary); }
 .bottom-bar {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 0.5rem 1rem; background-color: var(--bg-main); border-top: 1px solid var(--bg-panel);
+    padding: 0.5rem 1rem; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); background-color: var(--bg-main); border-top: 1px solid var(--bg-panel);
 }
 .legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); flex-wrap: wrap; }
 .legend-item { display: flex; align-items: center; gap: 0.3rem; }
